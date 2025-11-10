@@ -15,49 +15,61 @@ SRCS = main.c mlx_functions.c exit_functions.c get_next_line/get_next_line.c \
 
 OBJDIR = ./obj
 
-MLXDIR = ./mlx
-
-MLX = $(MLXDIR)/libmlx.a
-
 OBJS = $(addprefix $(OBJDIR)/,$(patsubst %.c,%.o,$(SRCS)))
 
 DEP = $(OBJ:.o=.d)
+
+
+MLX_GIT = https://github.com/42paris/minilibx-linux.git
+
+MLXDIR = ./mlx
+
+MLX = $(MLXDIR)/libmlx.a
 
 #FLAGS
 
 FLAGS = -Wall -Wextra -Werror -I$(INC) -I$(MLXDIR) -I/usr/include/ -g3
 
-### RAJOUTER WERROR
-
-# Libraries and Linker Flags
 LIB =  $(MLX)
-MLXFLAGS = -Lmlx -lmlx -L/usr/lib/X11 -lXext -lX11
+MLXFLAGS = -L$(MLXDIR) -lmlx -L/usr/lib/X11 -lXext -lX11 -lm
 
 #COMMANDS
 
-all : $(NAME) $(MLX)
+all : $(MLX) $(NAME)
+
+$(MLX):
+	@if [ ! -d "$(MLXDIR)" ]; then \
+		echo "$(YELLOW)Cloning MiniLibX...$(DEFAULT)" ; \
+		git clone $(MLX_GIT) $(MLXDIR) ; \
+	else \
+		echo "$(GREEN)MiniLibX directory already exists.$(DEFAULT)" ; \
+	fi
+	@echo "$(YELLOW)Compiling MiniLibX...$(DEFAULT)"
+	@$(MAKE) -C $(MLXDIR)
+	@echo "$(GREEN)MiniLibX compiled!$(DEFAULT)"
+
+$(NAME) : $(OBJS)
+	$(CC) $(FLAGS) $(OBJS) -o $(NAME) $(LIB) $(MLXFLAGS)
+	@echo "$(GREEN)$(NAME) created!$(DEFAULT)"
 
 $(OBJDIR)/%.o : %.c
 	mkdir -p $(@D)
-	$(CC) $(FLAGS) $(DEPFLAGS) -c $< -o $@ -lm
-
-$(NAME) : $(OBJS)
-	$(CC) $(FLAGS) $(OBJS) -o $(NAME) $(LIB) $(MLXFLAGS) -lm
-	@echo "$(GREEN)$(NAME) created!$(DEFAULT)"
+	$(CC) $(FLAGS) $(DEPFLAGS) -c $< -o $@
 
 clean:
 	$(RM) $(OBJS)
 	$(RM) $(OBJDIR)
-	@echo "$(YELLOW)object files deleted.$(DEFAULT)"
+	@if [ -d "$(MLXDIR)" ]; then $(MAKE) -C $(MLXDIR) clean; fi
+	@echo "$(YELLOW)Object files deleted.$(DEFAULT)"
 
 fclean : clean
 	$(RM) $(NAME)
-	@echo "$(RED)all files deleted.$(DEFAULT)"
+	$(RM) -r $(MLXDIR)
+	@echo "$(RED)All files deleted, including MLX directory.$(DEFAULT)"
 
 re : fclean all
 
-.PHONY:
-		fdf all clean fclean bonus re
+.PHONY: all clean fclean re bonus fdf
 
 #COLORS
 RED = \033[1;31m
